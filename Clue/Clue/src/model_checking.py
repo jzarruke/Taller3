@@ -8,7 +8,7 @@ Hint: Usa las funciones get_atoms() y evaluate() de logic_core.py.
 
 from __future__ import annotations
 
-from src.logic_core import Formula
+from src.logic_core import Formula, evaluate, get_atoms
 
 
 def get_all_models(atoms: set[str]) -> list[dict[str, bool]]:
@@ -31,7 +31,21 @@ def get_all_models(atoms: set[str]) -> list[dict[str, bool]]:
           Cada bit corresponde al valor de verdad de un atomo.
     """
     # === YOUR CODE HERE ===
-    raise NotImplementedError("Implementa get_all_models()")
+    # Ordenamos los atomos para tener un orden deterministico
+    atom_list = sorted(atoms)
+    n = len(atom_list)
+    models: list[dict[str, bool]] = []
+
+    # Recorremos los 2^n numeros posibles. Cada numero representa una
+    # asignacion de verdad: el bit j indica el valor del atomo j.
+    for i in range(2 ** n):
+        model: dict[str, bool] = {}
+        for j, atom in enumerate(atom_list):
+            # Extraemos el bit j-esimo y lo convertimos a booleano
+            model[atom] = bool((i >> j) & 1)
+        models.append(model)
+
+    return models
     # === END YOUR CODE ===
 
 
@@ -54,7 +68,11 @@ def check_satisfiable(formula: Formula) -> tuple[bool, dict[str, bool] | None]:
           la formula en cada uno usando evaluate().
     """
     # === YOUR CODE HERE ===
-    raise NotImplementedError("Implementa check_satisfiable()")
+    atoms = set(get_atoms(formula))
+    for model in get_all_models(atoms):
+        if evaluate(formula, model):
+            return (True, model)
+    return (False, None)
     # === END YOUR CODE ===
 
 
@@ -76,7 +94,11 @@ def check_valid(formula: Formula) -> bool:
           Alternativamente, verifica que sea verdadera en TODOS los modelos.
     """
     # === YOUR CODE HERE ===
-    raise NotImplementedError("Implementa check_valid()")
+    atoms = set(get_atoms(formula))
+    for model in get_all_models(atoms):
+        if not evaluate(formula, model):
+            return False
+    return True
     # === END YOUR CODE ===
 
 
@@ -101,7 +123,19 @@ def check_entailment(kb: list[Formula], query: Formula) -> bool:
           y la query sea falsa.
     """
     # === YOUR CODE HERE ===
-    raise NotImplementedError("Implementa check_entailment()")
+    # Recolectamos todos los atomos presentes en la KB y en la query
+    all_atoms: set[str] = set()
+    for f in kb:
+        all_atoms |= set(get_atoms(f))
+    all_atoms |= set(get_atoms(query))
+
+    # Para cada modelo posible, si toda la KB es verdadera pero la query
+    # es falsa, entonces NO hay entailment.
+    for model in get_all_models(all_atoms):
+        if all(evaluate(f, model) for f in kb):
+            if not evaluate(query, model):
+                return False
+    return True
     # === END YOUR CODE ===
 
 
@@ -125,5 +159,6 @@ def truth_table(formula: Formula) -> list[tuple[dict[str, bool], bool]]:
     Hint: Combina get_all_models() y evaluate().
     """
     # === YOUR CODE HERE ===
-    raise NotImplementedError("Implementa truth_table()")
+    atoms = set(get_atoms(formula))
+    return [(model, evaluate(formula, model)) for model in get_all_models(atoms)]
     # === END YOUR CODE ===
