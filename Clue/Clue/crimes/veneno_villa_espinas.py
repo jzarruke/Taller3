@@ -29,15 +29,89 @@ def crear_kb() -> KnowledgeBase:
     kb = KnowledgeBase()
 
     # Constantes del caso
-    reynaldo       = Term("reynaldo")
-    margot         = Term("margot")
-    pablo          = Term("pablo")
-    bernardo       = Term("bernardo")
+    reynaldo        = Term("reynaldo")
+    margot          = Term("margot")
+    pablo           = Term("pablo")
+    bernardo        = Term("bernardo")
     frasco_arsenico = Term("frasco_arsenico")
 
-    # === YOUR CODE HERE ===
+    # Variables para las reglas
+    X = Term("$X")
+    Y = Term("$Y")
+    A = Term("$A")
 
-    # === END YOUR CODE ===
+    # ─── HECHOS ──────────────────────────────────────────────────────
+
+    # El frasco de arsenico es el arma del crimen
+    kb.add_fact(Predicate("arma_del_crimen", (frasco_arsenico,)))
+
+    # Huellas de Reynaldo en el arma
+    kb.add_fact(Predicate("huellas_en", (reynaldo, frasco_arsenico)))
+
+    # Pablo y Bernardo estuvieron lejos de la escena (coartadas verificadas)
+    kb.add_fact(Predicate("lejos_de_escena", (pablo,)))
+    kb.add_fact(Predicate("lejos_de_escena", (bernardo,)))
+
+    # Reynaldo no tiene coartada verificada
+    kb.add_fact(Predicate("sin_coartada", (reynaldo,)))
+
+    # Acusaciones y coartadas cruzadas
+    kb.add_fact(Predicate("acusa", (pablo, reynaldo)))
+    kb.add_fact(Predicate("da_coartada", (margot, reynaldo)))
+    kb.add_fact(Predicate("da_coartada", (reynaldo, margot)))
+
+    # ─── REGLAS ──────────────────────────────────────────────────────
+
+    # R1: huellas en el arma del crimen -> evidencia directa
+    kb.add_rule(Rule(
+        head=Predicate("evidencia_directa", (X,)),
+        body=(
+            Predicate("huellas_en", (X, A)),
+            Predicate("arma_del_crimen", (A,)),
+        ),
+    ))
+
+    # R2: lejos de la escena -> descartado
+    kb.add_rule(Rule(
+        head=Predicate("descartado", (X,)),
+        body=(Predicate("lejos_de_escena", (X,)),),
+    ))
+
+    # R3: descartado + acusa -> testimonio confiable
+    kb.add_rule(Rule(
+        head=Predicate("testimonio_confiable", (X, Y)),
+        body=(
+            Predicate("descartado", (X,)),
+            Predicate("acusa", (X, Y)),
+        ),
+    ))
+
+    # R4: evidencia directa + sin coartada -> culpable
+    kb.add_rule(Rule(
+        head=Predicate("culpable", (X,)),
+        body=(
+            Predicate("evidencia_directa", (X,)),
+            Predicate("sin_coartada", (X,)),
+        ),
+    ))
+
+    # R5: dar coartada a un culpable -> encubridor
+    kb.add_rule(Rule(
+        head=Predicate("encubridor", (X,)),
+        body=(
+            Predicate("da_coartada", (X, Y)),
+            Predicate("culpable", (Y,)),
+        ),
+    ))
+
+    # R6: coartada mutua -> coartada cruzada
+    kb.add_rule(Rule(
+        head=Predicate("coartada_cruzada", (X, Y)),
+        body=(
+            Predicate("da_coartada", (X, Y)),
+            Predicate("da_coartada", (Y, X)),
+        ),
+    ))
 
     return kb
 
@@ -48,31 +122,31 @@ CASE = CrimeCase(
     suspects=("reynaldo", "margot", "pablo", "bernardo"),
     narrative=__doc__,
     description=(
-        "La víctima fue envenenada con arsénico. "
+        "La víctima fue envenenada con arsenico. "
         "El mayordomo tiene las huellas en el frasco y solo cuenta con la coartada de la cocinera, "
-        "quien a su vez solo cuenta con la de él. Razona sobre evidencia física, testimonios "
+        "quien a su vez solo cuenta con la de el. Razona sobre evidencia fisica, testimonios "
         "confiables y encubrimiento."
     ),
     create_kb=crear_kb,
     queries=(
         QuerySpec(
-            description="¿Pablo está descartado como culpable?",
+            description="Pablo esta descartado como culpable?",
             goal=Predicate("descartado", (Term("pablo"),)),
         ),
         QuerySpec(
-            description="¿El testimonio de Pablo contra Reynaldo es confiable?",
+            description="El testimonio de Pablo contra Reynaldo es confiable?",
             goal=Predicate("testimonio_confiable", (Term("pablo"), Term("reynaldo"))),
         ),
         QuerySpec(
-            description="¿Reynaldo es culpable?",
+            description="Reynaldo es culpable?",
             goal=Predicate("culpable", (Term("reynaldo"),)),
         ),
         QuerySpec(
-            description="¿Margot está encubriendo al culpable?",
+            description="Margot esta encubriendo al culpable?",
             goal=Predicate("encubridor", (Term("margot"),)),
         ),
         QuerySpec(
-            description="¿Existe coartada cruzada entre Margot y Reynaldo?",
+            description="Existe coartada cruzada entre Margot y Reynaldo?",
             goal=ExistsGoal("$X", Predicate("coartada_cruzada", (Term("$X"), Term("reynaldo")))),
         ),
     ),
